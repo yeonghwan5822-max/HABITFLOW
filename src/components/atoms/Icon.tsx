@@ -38,7 +38,9 @@ import {
   Crown,
   Clock,
   Shield,
-  Scale
+  Scale,
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 
 const icons = {
@@ -80,7 +82,9 @@ const icons = {
   Crown,
   Clock,
   Shield,
-  Scale
+  Scale,
+  ShieldAlert,
+  Sparkles
 };
 
 export type IconName = keyof typeof icons;

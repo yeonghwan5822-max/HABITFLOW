@@ -23,6 +23,54 @@ export function SettingsView({ theme, setTheme, user }: SettingsViewProps) {
 
       <div className="flex-1 space-y-10 pb-20">
         <section>
+          <div className="bg-zinc-950 dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-800 text-white shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+              <Icon name="Crown" size={120} strokeWidth={1} />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row gap-8 justify-between items-start">
+              <div className="max-w-md">
+                <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest mb-4">Pro Protocol</span>
+                <h2 className="text-3xl font-black mb-2 font-headline">HabitFlow <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500">Master Class</span></h2>
+                <p className="text-sm text-zinc-400 leading-relaxed mb-6">'Senior Warden' 이상 등급으로 오르기 위한 가장 빠르고 확실한 길. 지금 바로 업그레이드 하십시오.</p>
+                
+                <div className="flex items-end gap-1 mb-8">
+                  <span className="text-4xl font-black">₩2,900</span>
+                  <span className="text-sm text-zinc-500 font-bold mb-1">/ 월</span>
+                </div>
+
+                <Button variant="primary" className="w-full bg-white text-black hover:bg-gray-200" onClick={() => alert('결제 모듈 연동 준비 중입니다.')}>
+                  업그레이드 시작하기
+                </Button>
+              </div>
+
+              <div className="w-full md:w-1/2 flex flex-col gap-4">
+                <div className="flex gap-3 items-start border-l-2 border-zinc-800 pl-4 py-1">
+                  <Icon name="Sparkles" className="shrink-0 text-white" size={20} />
+                  <div>
+                    <h4 className="font-bold text-sm mb-1">AI Duty Reflection</h4>
+                    <p className="text-xs text-zinc-400">Gemini 3.1 Pro High 기반의 무제한 교관 성찰 피드백 기능.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start border-l-2 border-zinc-800 pl-4 py-1">
+                  <Icon name="ListTodo" className="shrink-0 text-white" size={20} />
+                  <div>
+                    <h4 className="font-bold text-sm mb-1">Unlimited Duties</h4>
+                    <p className="text-xs text-zinc-400">관리할 수 있는 습관 개수 제한 완벽 해제.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start border-l-2 border-zinc-800 pl-4 py-1">
+                  <Icon name="BarChart3" className="shrink-0 text-white" size={20} />
+                  <div>
+                    <h4 className="font-bold text-sm mb-1">Advanced Statistics</h4>
+                    <p className="text-xs text-zinc-400">주간/월간 단위의 '신뢰 등급(Integrity)' 상세 분석 리포트 제공.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
           <h2 className="text-xl font-black mb-6 flex items-center gap-2 font-headline">
             <Icon name="User" size={24} className="text-primary" />
             프로필 정보

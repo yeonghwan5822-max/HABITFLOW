@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Habit } from '../../types';
 import { Icon, IconName } from '../atoms/Icon';
 import { Button } from '../atoms/Button';
@@ -10,9 +10,53 @@ interface HabitsViewProps {
   habits: (Habit & { progress?: number })[];
   onAddHabit?: () => void;
   onDeleteHabit?: (id: string) => void;
+  editingId?: string | null;
+  setEditingId?: (id: string | null) => void;
+  updateHabit?: (id: string, updates: Partial<Habit>) => void;
 }
 
-const HabitListItem = memo(({ habit, onDelete }: { habit: Habit & { progress?: number }, onDelete?: (id: string) => void }) => {
+const HabitListItem = memo(({ habit, onDelete, editingId, setEditingId, updateHabit }: { 
+  habit: Habit & { progress?: number }, 
+  onDelete?: (id: string) => void,
+  editingId?: string | null,
+  setEditingId?: (id: string | null) => void,
+  updateHabit?: (id: string, updates: Partial<Habit>) => void
+}) => {
+  const isEditing = editingId === habit.id;
+  const [editName, setEditName] = useState(habit.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    setEditName(habit.name);
+  }, [habit.name]);
+
+  const handleSave = () => {
+    const trimmedName = editName.trim();
+    if (trimmedName === '') {
+      if (onDelete) onDelete(habit.id);
+    } else if (trimmedName !== habit.name && updateHabit) {
+      updateHabit(habit.id, { name: trimmedName });
+    } else {
+      setEditName(habit.name);
+    }
+    if (setEditingId) setEditingId(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditName(habit.name);
+      if (setEditingId) setEditingId(null);
+    }
+  };
+
   return (
     <div className="bg-card p-6 rounded-2xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-shadow group">
       <div className="flex items-center gap-6">
@@ -20,7 +64,24 @@ const HabitListItem = memo(({ habit, onDelete }: { habit: Habit & { progress?: n
           <Icon name={habit.icon as IconName} size={28} className={habit.color} />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-card-foreground mb-1">{habit.name}</h3>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleSave}
+              className="text-lg font-bold bg-transparent border-b-2 border-primary focus:outline-none text-card-foreground mb-1 w-full max-w-[200px]"
+            />
+          ) : (
+            <h3 
+              className="text-lg font-bold text-card-foreground mb-1 cursor-pointer"
+              onDoubleClick={() => setEditingId?.(habit.id)}
+            >
+              {habit.name}
+            </h3>
+          )}
           <div className="flex items-center gap-3">
             <Badge variant="secondary">{habit.frequency}</Badge>
             <span className="flex items-center gap-1 text-muted-foreground text-xs">
@@ -58,7 +119,7 @@ const HabitListItem = memo(({ habit, onDelete }: { habit: Habit & { progress?: n
 
 HabitListItem.displayName = 'HabitListItem';
 
-export function HabitsView({ habits, onAddHabit, onDeleteHabit }: HabitsViewProps) {
+export function HabitsView({ habits, onAddHabit, onDeleteHabit, editingId, setEditingId, updateHabit }: HabitsViewProps) {
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex justify-between items-end mb-8">
@@ -92,7 +153,14 @@ export function HabitsView({ habits, onAddHabit, onDeleteHabit }: HabitsViewProp
       ) : (
         <div className="space-y-4">
           {habits.map((habit) => (
-            <HabitListItem key={habit.id} habit={habit} onDelete={onDeleteHabit} />
+            <HabitListItem 
+              key={habit.id} 
+              habit={habit} 
+              onDelete={onDeleteHabit} 
+              editingId={editingId}
+              setEditingId={setEditingId}
+              updateHabit={updateHabit}
+            />
           ))}
         </div>
       )}

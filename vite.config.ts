@@ -17,8 +17,8 @@ export default defineConfig(({mode}) => {
           name: 'HabitFlow',
           short_name: 'HabitFlow',
           description: '당신의 성장을 돕는 습관 관리 앱',
-          theme_color: '#18181b',
-          background_color: '#18181b',
+          theme_color: '#000000',
+          background_color: '#ffffff',
           display: 'standalone',
           icons: [
             {
@@ -38,6 +38,9 @@ export default defineConfig(({mode}) => {
               purpose: 'any maskable'
             }
           ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         }
       })
     ],

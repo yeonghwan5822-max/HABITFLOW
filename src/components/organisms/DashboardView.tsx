@@ -14,18 +14,19 @@ interface DashboardViewProps {
   onToggle: (id: string) => void;
   progressPercent: number;
   onAddHabit?: () => void;
+  editingId?: string | null;
+  setEditingId?: (id: string | null) => void;
+  updateHabit?: (id: string, updates: Partial<Habit>) => void;
+  deleteHabit?: (id: string) => void;
 }
 
-export function DashboardView({ habits, onToggle, progressPercent, onAddHabit }: DashboardViewProps) {
+export function DashboardView({ habits, onToggle, progressPercent, onAddHabit, editingId, setEditingId, updateHabit, deleteHabit }: DashboardViewProps) {
   const pendingHabits = habits.filter(h => !h.isCompletedToday);
   const completedHabits = habits.filter(h => h.isCompletedToday);
   const remainingCount = pendingHabits.length;
   
-  // Calculate max streak from all habits
-  const maxStreak = habits.length > 0 ? Math.max(...habits.map(h => h.streak || 0)) : 0;
-  
-  // Calculate integrity score
-  const { score, tier, loading: loadingScore } = useIntegrityScore(habits);
+  // Calculate integrity score and pull strict global streak
+  const { score, tier, globalStreak, loading: loadingScore } = useIntegrityScore(habits);
 
   const rankOrder: Record<DisciplineRank, number> = {
     'Cadet': 1,
@@ -78,8 +79,8 @@ export function DashboardView({ habits, onToggle, progressPercent, onAddHabit }:
       <div className="col-span-12 lg:col-span-4 bg-card rounded-2xl p-6 shadow-sm border border-border flex flex-col justify-between">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2 py-1 rounded">Daily Goal</span>
-            <h3 className="text-xl font-bold mt-2 font-headline text-card-foreground">최고 스트릭: {maxStreak}일</h3>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2 py-1 rounded">Global Protocol</span>
+            <h3 className="text-xl font-bold mt-2 font-headline text-card-foreground">Global Streak: {globalStreak}일</h3>
           </div>
           <Icon name="Flame" size={32} className="text-primary fill-primary" />
         </div>
@@ -113,7 +114,14 @@ export function DashboardView({ habits, onToggle, progressPercent, onAddHabit }:
               <Icon name="Clock" size={20} className="text-primary" />
               <h3 className="text-lg font-bold text-primary">오늘의 미완료 습관</h3>
             </div>
-            <HabitGrid habits={pendingHabits} onToggle={onToggle} />
+            <HabitGrid 
+              habits={pendingHabits} 
+              onToggle={onToggle} 
+              editingId={editingId} 
+              setEditingId={setEditingId} 
+              updateHabit={updateHabit} 
+              deleteHabit={deleteHabit}
+            />
           </div>
         )}
         
@@ -121,7 +129,15 @@ export function DashboardView({ habits, onToggle, progressPercent, onAddHabit }:
           <div className="flex items-center justify-between mb-4 px-2">
             <h3 className="text-lg font-bold text-foreground">전체 습관</h3>
           </div>
-          <HabitGrid habits={habits} onToggle={onToggle} onAddHabit={onAddHabit} />
+          <HabitGrid 
+            habits={habits} 
+            onToggle={onToggle} 
+            onAddHabit={onAddHabit}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            updateHabit={updateHabit}
+            deleteHabit={deleteHabit}
+          />
         </div>
       </div>
 

@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { JournalEntry, Mood } from '../../types';
 import { cn } from '../../lib/utils';
 import { Button } from '../atoms/Button';
 import { Icon } from '../atoms/Icon';
 import { EmptyState } from '../molecules/EmptyState';
 import { getLocalDateString } from '../../lib/dateUtils';
+import { generatePoliceInstructorFeedback } from '../../lib/gemini';
+import { trackAIReflection } from '../../lib/analytics';
+import { toast } from 'sonner';
 
 interface JournalViewProps {
   entries: JournalEntry[];
@@ -13,6 +16,8 @@ interface JournalViewProps {
   content: string;
   setContent: (content: string) => void;
   onSave: () => void;
+  isPremium?: boolean;
+  completionRate?: number;
 }
 
 export function JournalView({ 
@@ -21,8 +26,12 @@ export function JournalView({
   setMood, 
   content, 
   setContent, 
-  onSave 
+  onSave,
+  isPremium = false,
+  completionRate = 0
 }: JournalViewProps) {
+  const [reflection, setReflection] = useState<string | null>(null);
+  const [isReflecting, setIsReflecting] = useState(false);
   const moods: Mood[] = ['🤩', '😊', '😐', '😔', '😢'];
   const labels = ['최고예요', '좋아요', '평범해요', '그저 그래요', '별로예요'];
 
@@ -32,6 +41,29 @@ export function JournalView({
     day: 'numeric', 
     weekday: 'long' 
   }).format(new Date());
+
+  const handleReflection = async () => {
+    if (!isPremium) {
+      toast.error('AI 교관의 성찰은 프리미엄 멤버십 전용 기능입니다.');
+      return;
+    }
+    if (!content.trim()) {
+      toast.error('일기를 먼저 작성해 주십시오, 훈련병!');
+      return;
+    }
+    
+    setIsReflecting(true);
+    setReflection(null);
+    trackAIReflection();
+    try {
+      const result = await generatePoliceInstructorFeedback(content, completionRate);
+      setReflection(result || null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '성찰에 실패했습니다.');
+    } finally {
+      setIsReflecting(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -71,12 +103,39 @@ export function JournalView({
             <textarea 
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full h-64 p-5 rounded-2xl bg-muted border-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground resize-none leading-relaxed text-sm" 
+              className="w-full h-48 p-5 rounded-2xl bg-muted border-none focus:ring-2 focus:ring-primary/20 text-foreground placeholder:text-muted-foreground resize-none leading-relaxed text-sm" 
               placeholder="오늘의 습관 실천 소감을 자유롭게 기록해 보세요. 사소한 변화도 소중한 기록이 됩니다."
             />
-            <div className="flex justify-end gap-3 mt-2">
-              <Button variant="outline" size="sm">임시저장</Button>
-              <Button variant="primary" size="sm" onClick={onSave}>저장하기</Button>
+            {reflection && (
+              <div className="mt-2 border-l-4 border-primary bg-primary/5 p-5 rounded-r-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="ShieldAlert" size={16} className="text-primary" />
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest">교관의 피드백</span>
+                </div>
+                <p className="text-sm text-foreground/90 leading-relaxed font-serif whitespace-pre-wrap">
+                  "{reflection}"
+                </p>
+              </div>
+            )}
+            <div className="flex justify-between items-center mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleReflection}
+                className={cn("gap-2", !isPremium && "opacity-50")}
+                disabled={isReflecting}
+              >
+                {isReflecting ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Icon name="Sparkles" size={16} />
+                )}
+                {isPremium ? 'AI 성찰 받기' : 'AI 성찰 (Premium)'}
+              </Button>
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm">임시저장</Button>
+                <Button variant="primary" size="sm" onClick={onSave}>저장하기</Button>
+              </div>
             </div>
           </div>
         </div>

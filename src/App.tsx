@@ -7,6 +7,7 @@ import { useJournal } from './hooks/useJournal';
 import { useReports } from './hooks/useReports';
 import { useTheme } from './hooks/useTheme';
 import { useReminders } from './hooks/useReminders';
+import { useUserProfile } from './hooks/useUserProfile';
 import { Sidebar } from './components/organisms/Sidebar';
 import { DashboardView } from './components/organisms/DashboardView';
 import { HabitsView } from './components/organisms/HabitsView';
@@ -18,22 +19,29 @@ import { Icon } from './components/atoms/Icon';
 import { ErrorBoundary } from './components/atoms/ErrorBoundary';
 import { auth, logout } from './firebase';
 import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
+import { initGA, trackLoginSuccess } from './lib/analytics';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const { habits, toggleHabit, addHabit, deleteHabit, progressPercent, loading: loadingHabits } = useHabits();
+  const { habits, toggleHabit, addHabit, deleteHabit, updateHabit, editingId, setEditingId, progressPercent, loading: loadingHabits } = useHabits();
   const { entries, mood, setMood, content, setContent, saveEntry, loading: loadingJournal } = useJournal();
   const { weeklyData, insights, averageCompletion } = useReports();
   const { theme, setTheme } = useTheme();
+  const { profile, loading: loadingProfile } = useUserProfile();
 
   useReminders(habits);
 
-  useEffect(() => { signInAnonymously(auth); 
+  useEffect(() => { 
+    initGA();
+    signInAnonymously(auth); 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        trackLoginSuccess(currentUser.uid);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -42,8 +50,8 @@ export default function App() {
   const handleAddHabit = () => {
     // In a real app, this would open a modal to create a habit
     addHabit({
-      name: '새로운 습관',
-      description: '습관에 대한 설명을 입력하세요.',
+      name: '',
+      description: '목표와 설명을 여기에 적습니다.',
       frequency: '매일',
       time: '오전 09:00',
       icon: 'Star',
@@ -78,7 +86,7 @@ export default function App() {
     weekday: 'long' 
   }).format(new Date());
 
-  if (loading || (user && (loadingHabits || loadingJournal))) {
+  if (loading || (user && (loadingHabits || loadingJournal || loadingProfile))) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -147,6 +155,9 @@ export default function App() {
                   onToggle={toggleHabit} 
                   progressPercent={progressPercent} 
                   onAddHabit={handleAddHabit}
+                  editingId={editingId}
+                  setEditingId={setEditingId}
+                  updateHabit={updateHabit}
                 />
               )}
               {currentView === 'habits' && (
@@ -154,6 +165,9 @@ export default function App() {
                   habits={habits} 
                   onAddHabit={handleAddHabit}
                   onDeleteHabit={handleDeleteHabit}
+                  editingId={editingId}
+                  setEditingId={setEditingId}
+                  updateHabit={updateHabit}
                 />
               )}
               {currentView === 'journal' && (
@@ -164,6 +178,8 @@ export default function App() {
                   content={content} 
                   setContent={setContent} 
                   onSave={handleSaveJournal}
+                  isPremium={profile?.is_premium || false}
+                  completionRate={progressPercent}
                 />
               )}
               {currentView === 'reports' && (

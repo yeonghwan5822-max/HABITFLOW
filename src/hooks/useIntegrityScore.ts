@@ -8,6 +8,7 @@ export type DisciplineRank = 'Cadet' | 'Officer' | 'Senior Warden' | 'Master of 
 export function useIntegrityScore(habits: Habit[]) {
   const [score, setScore] = useState<number>(0);
   const [tier, setTier] = useState<DisciplineRank>('Cadet');
+  const [globalStreak, setGlobalStreak] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -20,12 +21,50 @@ export function useIntegrityScore(habits: Habit[]) {
       if (habits.length === 0) {
         setScore(0);
         setTier('Cadet');
+        setGlobalStreak(0);
         setLoading(false);
         return;
       }
 
-      // 1. Calculate max streak (Consecutive Days)
-      const maxStreak = Math.max(...habits.map(h => h.streak || 0), 0);
+      // 1. Calculate Global Streak (Strict)
+      const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const isCompleted = (dateStr: string) => {
+        const activeHabits = habits.filter(h => h.createdAt.slice(0, 10) <= dateStr);
+        if (activeHabits.length === 0) return false;
+        return activeHabits.every(h => h.completedDates?.includes(dateStr));
+      };
+
+      let currentGlobalStreak = 0;
+      const currentDateForStreak = new Date();
+      const todayStr = formatDate(currentDateForStreak);
+
+      if (isCompleted(todayStr)) {
+        currentGlobalStreak++;
+      }
+
+      currentDateForStreak.setDate(currentDateForStreak.getDate() - 1);
+      
+      while (true) {
+        const dateStr = formatDate(currentDateForStreak);
+        const activeHabits = habits.filter(h => h.createdAt.slice(0, 10) <= dateStr);
+        
+        if (activeHabits.length === 0) break;
+        
+        if (isCompleted(dateStr)) {
+          currentGlobalStreak++;
+          currentDateForStreak.setDate(currentDateForStreak.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      setGlobalStreak(currentGlobalStreak);
 
       // 2. Calculate completion rate
       let totalCompleted = 0;
@@ -50,8 +89,8 @@ export function useIntegrityScore(habits: Habit[]) {
 
       const completionRate = totalExpected > 0 ? (totalCompleted / totalExpected) * 100 : 0;
 
-      // 3. Formula: Score = (Consecutive Days * 1.2) + (Total Completion Rate * 0.8)
-      const calculatedScore = Math.round((maxStreak * 1.2) + (completionRate * 0.8));
+      // 3. Formula: Score = (Global Streak * 1.5) + (Total Completion Rate * 0.5)
+      const calculatedScore = Math.round((currentGlobalStreak * 1.5) + (completionRate * 0.5));
 
       setScore(calculatedScore);
 
@@ -71,10 +110,10 @@ export function useIntegrityScore(habits: Habit[]) {
         
         if (userSnap.exists()) {
           const data = userSnap.data();
-          if (data.integrity_score !== calculatedScore || data.max_streak !== maxStreak || data.current_rank !== currentTier) {
+          if (data.integrity_score !== calculatedScore || data.global_streak !== currentGlobalStreak || data.current_rank !== currentTier) {
             await updateDoc(userRef, {
               integrity_score: calculatedScore,
-              max_streak: maxStreak,
+              global_streak: currentGlobalStreak,
               current_rank: currentTier
             });
           }
@@ -83,7 +122,7 @@ export function useIntegrityScore(habits: Habit[]) {
             uid: auth.currentUser.uid,
             email: auth.currentUser.email,
             integrity_score: calculatedScore,
-            max_streak: maxStreak,
+            global_streak: currentGlobalStreak,
             current_rank: currentTier,
             createdAt: new Date().toISOString()
           }, { merge: true });
@@ -99,5 +138,5 @@ export function useIntegrityScore(habits: Habit[]) {
     calculateScore();
   }, [habits]);
 
-  return { score, tier, loading };
+  return { score, tier, globalStreak, loading };
 }

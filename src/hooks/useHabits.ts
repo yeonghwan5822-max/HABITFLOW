@@ -4,6 +4,7 @@ import { getLocalDateString, calculateStreak, calculateWeeklyProgress } from '..
 import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { trackHabitCompletion } from '../lib/analytics';
 
 enum OperationType {
   CREATE = 'create',
@@ -41,6 +42,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 export function useHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -49,9 +51,9 @@ export function useHabits() {
       return;
     }
 
-    const q = query(collection(db, 'habits'), where('userId', '==', auth.currentUser.uid));
+    const habitsRef = collection(db, 'users', auth.currentUser.uid, 'habits');
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(habitsRef, (snapshot) => {
       const fetchedHabits: Habit[] = [];
       snapshot.forEach((doc) => {
         fetchedHabits.push(doc.data() as Habit);
@@ -92,16 +94,34 @@ export function useHabits() {
           ? habit.completedDates.filter(d => d !== today)
           : [...habit.completedDates, today];
         
-        await updateDoc(doc(db, 'habits', id), { 
+        // Track analytics if completing
+        if (!isCompletedToday) {
+          trackHabitCompletion(habit.name);
+        }
+        
+        await updateDoc(doc(db, 'users', auth.currentUser.uid, 'habits', id), { 
           completedDates: newCompletedDates 
         });
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `habits/${id}`);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser?.uid}/habits/${id}`);
       // Revert will happen automatically via onSnapshot if the server rejects it, 
       // but we could also manually revert here if needed.
     }
   }, [habits]);
+
+  const updateHabit = useCallback(async (id: string, updates: Partial<Habit>) => {
+    if (!auth.currentUser) return;
+
+    // Optimistic Update
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
+
+    try {
+      await updateDoc(doc(db, 'users', auth.currentUser.uid, 'habits', id), updates);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser?.uid}/habits/${id}`);
+    }
+  }, []);
 
   const addHabit = useCallback(async (habitData: Omit<Habit, 'id' | 'userId' | 'completedDates' | 'createdAt'>) => {
     if (!auth.currentUser) return;
@@ -117,14 +137,18 @@ export function useHabits() {
 
     // Optimistic Update
     setHabits(prev => [newHabit, ...prev]);
+    setEditingId(newId);
 
     try {
-      await setDoc(doc(db, 'habits', newId), newHabit);
+      await setDoc(doc(db, 'users', auth.currentUser.uid, 'habits', newId), newHabit);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `habits/${newId}`);
+      handleFirestoreError(error, OperationType.CREATE, `users/${auth.currentUser?.uid}/habits/${newId}`);
       // Revert optimistic update
       setHabits(prev => prev.filter(h => h.id !== newId));
+      setEditingId(null);
     }
+    
+    return newId;
   }, []);
 
   const deleteHabit = useCallback(async (id: string) => {
@@ -135,9 +159,9 @@ export function useHabits() {
     setHabits(prev => prev.filter(h => h.id !== id));
 
     try {
-      await deleteDoc(doc(db, 'habits', id));
+      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'habits', id));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `habits/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `users/${auth.currentUser?.uid}/habits/${id}`);
       // Revert optimistic update
       if (habitToDelete) {
         setHabits(prev => [...prev, habitToDelete].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -161,6 +185,9 @@ export function useHabits() {
     toggleHabit,
     addHabit,
     deleteHabit,
+    updateHabit,
+    editingId,
+    setEditingId,
     completedCount,
     progressPercent,
     loading

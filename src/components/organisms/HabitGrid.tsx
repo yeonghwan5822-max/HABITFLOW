@@ -9,6 +9,10 @@ interface HabitGridProps {
   habits: (Habit & { isCompletedToday?: boolean })[];
   onToggle: (id: string) => void;
   onAddHabit?: () => void;
+  editingId?: string | null;
+  setEditingId?: (id: string | null) => void;
+  updateHabit?: (id: string, updates: Partial<Habit>) => void;
+  deleteHabit?: (id: string) => void;
 }
 
 const containerVariants = {
@@ -33,7 +37,7 @@ const itemVariants = {
   }
 };
 
-export function HabitGrid({ habits, onToggle, onAddHabit }: HabitGridProps) {
+export function HabitGrid({ habits, onToggle, onAddHabit, editingId, setEditingId, updateHabit, deleteHabit }: HabitGridProps) {
   if (habits.length === 0) {
     return (
       <EmptyState
@@ -64,7 +68,14 @@ export function HabitGrid({ habits, onToggle, onAddHabit }: HabitGridProps) {
     >
       {habits.map((habit) => (
         <motion.div key={habit.id} variants={itemVariants}>
-          <HabitCard habit={habit} onToggle={onToggle} />
+          <HabitCard 
+            habit={habit} 
+            onToggle={onToggle} 
+            editingId={editingId}
+            setEditingId={setEditingId}
+            updateHabit={updateHabit}
+            deleteHabit={deleteHabit}
+          />
         </motion.div>
       ))}
       {onAddHabit && (
