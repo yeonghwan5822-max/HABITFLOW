@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // 브라우저 콘솔에서 확인하기 위한 디버깅 로그
@@ -20,3 +20,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export { auth, db, app };
+
+export const googleProvider = new GoogleAuthProvider();
+
+export const signInWithGoogle = async () => {
+  await signInWithPopup(auth, googleProvider);
+};
+
+export const logout = async () => {
+  await signOut(auth);
+};
