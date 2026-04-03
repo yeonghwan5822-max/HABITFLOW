@@ -1,9 +1,9 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// Debug: Vercel 배포 후 브라우저 콘솔에서 직접 확인
-console.log("Firebase Env Check:", import.meta.env.VITE_FIREBASE_API_KEY ? "Key Found" : "Key Missing");
+// 브라우저 콘솔에서 확인하기 위한 디버깅 로그
+console.log("Firebase Env Check:", import.meta.env.VITE_FIREBASE_API_KEY ? "✅ Key Found" : "❌ Key Missing");
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,19 +11,12 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
+// 안전한 초기화 로직
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
-
-export const signInWithGoogle = async () => {
-  await signInWithPopup(auth, googleProvider);
-};
-
-export const logout = async () => {
-  await signOut(auth);
-};
+export { auth, db, app };
