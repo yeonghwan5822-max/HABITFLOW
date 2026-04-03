@@ -29,14 +29,43 @@ if (!firebaseConfig.apiKey) {
   );
 }
 
-const app = initializeApp(firebaseConfig);
-
-export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
-}, firebaseConfig.firestoreDatabaseId);
-
+let app: any;
+export let auth: any;
+export let db: any;
 export const googleProvider = new GoogleAuthProvider();
+
+try {
+  // Debugging: Log exactly which keys are missing
+  const missingKeys = [];
+  if (!firebaseConfig.apiKey) missingKeys.push('VITE_FIREBASE_API_KEY');
+  if (!firebaseConfig.authDomain) missingKeys.push('VITE_FIREBASE_AUTH_DOMAIN');
+  if (!firebaseConfig.projectId) missingKeys.push('VITE_FIREBASE_PROJECT_ID');
+  
+  if (missingKeys.length > 0) {
+    console.error("🔥 Firebase Config Warning - Missing Keys:", missingKeys.join(', '));
+  }
+
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+  }, firebaseConfig.firestoreDatabaseId);
+
+} catch (error) {
+  console.error("🔥 Firebase FATAL Initialization Error:", error);
+  // Safe-Guard: Replace DOM to prevent white screen of death
+  if (typeof document !== 'undefined') {
+    document.body.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background-color: #f9f9f9; color: #333; font-family: sans-serif; padding: 20px;">
+        <div style="text-align: center; max-width: 500px; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+          <h2 style="color: #ef4444; margin-bottom: 16px;">설정 오류가 발생했습니다</h2>
+          <p style="margin-bottom: 24px; color: #666;">Vercel 환경 변수(Environment Variables) 설정과 Vite 빌드 설정 간 문제가 발생하여 클라이언트를 로드할 수 없습니다.</p>
+          <p style="font-size: 13px; color: #999; background: #f3f4f6; padding: 12px; border-radius: 6px;">디버그 힌트: 콘솔(Developer Tools)을 확인하여 누락된 API 키를 점검해 주세요.</p>
+        </div>
+      </div>
+    `;
+  }
+}
 
 export const signInWithGoogle = async () => {
   try {
